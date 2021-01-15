@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset="utf-8"/>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        var level = 0;
+        var callcount = 0;
+
+        function calculate(event)
+        {
+            event.preventDefault();
+
+            var value = d3.select('#number').property('value');
+            // find num[value]
+            level = 0;
+            callcount = 0;
+            var t0 = performance.now();
+            var result = GetValue(value);
+            var t1 = performance.now();
+            d3.select('#result').text("Result: " + result);
+            console.log('time: ' + (t1 - t0) + " ms");
+        }
+
+        function GetValue(index)
+        {
+            level += 1;
+            callcount += 1;
+            //console.log('level:' + level + " index:" + index + " count:" + callcount);
+
+            
+            if (0 === index) {
+                level -= 1;
+                return 0;
+            }
+            if (1 === index) {
+                level -= 1;
+                return 1;
+            }
+            var result = 0;
+            if ((index & 1) === 0) {
+                result = GetValue(index >> 1);
+            }
+            else {
+                var half_index = index >> 1;
+                result = GetValue(half_index) + GetValue(half_index + 1)
+            }
+            
+            level -= 1;
+            return result;
+        }
+    </script>
+    
+</head>
+
+<body bgcolor='black'>
+
+    <form><label for='number' style='color:#bbbbbb'>Index</label><input id='number' type='text' value=''><button type="submit" onclick='calculate(event);'>Find</button></form>
+    <div><p id="result" style="color:#bbbbbb">Result: 0</p></div>
+
+    <table style='border-collapse: collapse;background-color: #bbbbbb;'></table>
+
+    <script type='text/javascript'>
+
+        var STEPPING = 40;
+        var data = [
+            {
+                'index': 0,
+                'value': 0
+            }, 
+            {
+                'index': 1,
+                'value': 1
+            }
+        ];
+        var x = 999;
+        for(var i = 1; x > (i * 2); ++i) {
+            var idx = i * 2;
+            data.push({
+                'index': idx,
+                'value': data[i].value
+            });
+            if (x > (idx+1)) {
+                data.push({
+                    'index': idx+1,
+                    'value': data[i].value + data[i+1].value
+                });
+            }
+        }
+
+        
+
+        var newmap = [[{'index': 'x', 'value':' '}]];
+        for (var i = 0; STEPPING > i; ++i) {
+            newmap[0].push({'index':'x', 'value':i});
+        }
+
+        //console.log(newmap);
+
+        newmap = data.reduce(function(map, d, currentIndex) {
+            var idx = Math.floor(currentIndex / STEPPING) + 1;
+
+            if (currentIndex % STEPPING == 0) {
+                map.push([{
+                    'index': 'd',
+                    'value': Math.floor(currentIndex/10)
+                }]);
+            }
+            map[idx].push(d);
+
+            return map;
+        }, newmap);
+
+
+
+        var largest = 0;
+        var isbigger = 0;
+
+        var tr = d3.select('table')
+            .selectAll('tr')
+            .data(newmap)
+            .enter()
+            .append('tr')
+            .style('border', function(d, i){
+                //console.log(i);
+                if (i == 0) {
+                    return '1px solid black';
+                }
+                return '0px';
+            });
+
+        tr.selectAll('td')
+            .data(function(d, i) {
+                
+                return d;
+            })
+            .enter()
+            .append('td')
+            .style('border', function(d, i){
+                //console.log(i);
+                if (i == 0) {
+                    return '1px solid black';
+                }
+                return '0px';
+            })
+            .style('width', '25px')
+            .append('span')
+            .style('color', function(d, i){
+                if (isPrime(d.index)) {
+                    if (largest < d.value) {
+                        largest = d.value;
+                    }
+               
+                    
+                }
+                if (d.value == 1) {
+                    return '#ff0000';
+                }
+                return '#000000';
+            })
+            .text(function(d) {
+                return d.value;
+            });
+        
+        d3.select('body').append('p').style('color', '#bbbbbb').text("Largest prime value: " + largest);
+    
+        function isPrime(num) {
+            for(var i = 2; i < num; i++)
+                if(num % i === 0) return false;
+            return num > 1;
+        }
+    
+        </script>
+</body>
+
+</html>
