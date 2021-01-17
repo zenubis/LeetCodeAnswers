@@ -44,6 +44,9 @@ public:
         return count(n, 5);
     }
 
+    // n is level
+    // c is number to stand for vowels
+    //   a = 5, e = 4, i = 3, o = 2 and u = 1
     int count(int n, int c)
     {
         if (n == 1|| c == 1) {
@@ -51,8 +54,7 @@ public:
         }
 
         // find in cache
-        int key = (n << 24 | ((c-2) & 0x7));
-
+        int key = (n << 24 | ((c-2) & 0xF));
         auto itr = cache.find(key);
         if (itr != cache.end()) {
             return itr->second;
