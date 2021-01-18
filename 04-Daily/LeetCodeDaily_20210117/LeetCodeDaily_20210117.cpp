@@ -65,7 +65,7 @@ public:
         while (c > 0) {
             total += count(n, c--);
         }
-
+        
         cache.insert(std::pair<int, int>(key, total));
         return total;
     }
