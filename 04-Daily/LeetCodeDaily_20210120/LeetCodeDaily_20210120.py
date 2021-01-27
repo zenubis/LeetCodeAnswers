@@ -40,13 +40,13 @@ class Solution:
                 stack.append(s[x])
             elif s[x] == ')':
                 if not self.PopAndCheck(stack, '('):
-                    return False;
+                    return False
             elif s[x] == ']':
                 if not self.PopAndCheck(stack, '['):
-                    return False;
+                    return False
             elif s[x] == '}':
                 if not self.PopAndCheck(stack, '{'):
-                    return False;
+                    return False
             
         return len(stack) == 0
     
