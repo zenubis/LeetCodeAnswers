@@ -26,22 +26,37 @@
 
 import collections
 import math
+import time
+from collections import _heapq
 
 # using A* path finding
 class Node:
     # G is the distance between the current node and the start node.
     # H is the heuristic — estimated distance from the current node to the end node.
     # F is the total cost of the node. ie, g + h
-    def __init__(self, x:int, y:int, g:int, dest_x:int, dest_y:int):
+    def __init__(self, x:int, y:int, g:int, grid_size:int, parent = None):
         self.x = x
         self.y = y
         self.g = g
-        dx = dest_x - x
-        dy = dest_y - y
+        self.parent = parent
+        dx = grid_size - x
+        dy = grid_size - y
         if dx < dy:
             self.f = self.g + dx + (dy - dx)
         else:
             self.f = self.g + dy + (dx - dy)
+
+    def copy(self, other):
+        self.x = other.x
+        self.y = other.y
+        self.g = other.g
+        self.f = other.f
+        self.parent = other.parent
+
+    def printPath(self):
+        if self.parent:
+            self.parent.printPath()
+        print(self)
     
     def __lt__(self, rhs):
         return rhs and self.f < rhs.f
@@ -51,62 +66,76 @@ class Node:
 
 
 class Solution:
+    direction = [
+        (-1, -1), ( 0, -1), ( 1, -1),
+        (-1,  0),           ( 1,  0),
+        (-1,  1), ( 0,  1), ( 1,  1),
+    ]
+
     def shortestPathBinaryMatrix(self, grid: list[list[int]]) -> int:
-        if grid[0][0] == 1:
+        if grid[0][0] == 1 or grid[-1][-1] == 1:
             return -1
 
         grid_size = len(grid)
-        open_list = [Node(0, 0, 1, grid_size, grid_size)]
+        start = Node(0, 0, 1, grid_size)
+        open_list = [start]
+        lookup = { (start.x, start.y) : start }
         close_list = set()
 
         while open_list:
-            candidate = collections._heapq.heappop(open_list)
+            candidate = _heapq.heappop(open_list)
+            del lookup[(candidate.x, candidate.y)]
             close_list.add((candidate.x, candidate.y))
+
+            # check if we're at goal
             if candidate.x == grid_size - 1 and candidate.y == grid_size - 1:
+                # print("the winning path:")
+                # candidate.printPath()
                 return candidate.g
             
             #add all neighbours of candidate
-            self.addNeighbour(open_list, close_list, candidate, grid, grid_size)
+            self.addNeighbour(open_list, close_list, lookup, candidate, grid, grid_size)
 
         return -1
 
-    def addNeighbour(self, open_list:list, close_list:set, candidate:Node, grid:list[list[int]], grid_size:int):
-        for ix in range(-1, 2):
-            for iy in range(-1, 2):
-                if ix == 0 and iy == 0:
-                    continue
-
-                new_x = candidate.x + ix
-                new_y = candidate.y + iy
-                
-                #check bounds
-                if new_x < 0 or new_x >= grid_size or new_y < 0 or new_y >= grid_size or grid[new_x][new_y] == 1:
-                    continue
-
-                new_node = Node(new_x, new_y, candidate.g + 1, grid_size, grid_size)
+    def addNeighbour(self, open_list:list, close_list:set, lookup:dict, candidate:Node, grid:list[list[int]], grid_size:int):
+        
+        for d in self.direction:
             
-                # is it already explored
-                if (new_node.x, new_node.y) in close_list:
-                    continue
+            new_x = candidate.x + d[0]
+            new_y = candidate.y + d[1]
+            
+            #check bounds
+            if 0 > new_x or new_x >= grid_size or 0 > new_y or new_y >= grid_size or grid[new_x][new_y] == 1:
+                continue
 
-                # if node in open_list
-                found = False
-                for x in open_list:
-                    if x.x == new_node.x and x.y == new_node.y:
-                        found = True
+            # is it already explored
+            if (new_x, new_y) in close_list:
+                continue
 
-                        # and g value is smaller            
-                        if x.g > new_node.g:
-                            x.g = new_node.g
-                            x.f = new_node.f
-                            collections._heapq.heapify(open_list)
-                            break
-                if found:
-                    continue
-                collections._heapq.heappush(open_list, new_node)
-             
+            new_node = Node(new_x, new_y, candidate.g + 1, grid_size, candidate)
+        
+            # if node is in open_list
+            try:
+                node = lookup[(new_x, new_y)]
+                # and g value is smaller
+                if node.g > new_node.g:
+                    # we replace it
+                    node.copy(new_node)
+                    # since we changed the value, heap structure is invalid
+                    # need to re-heapify it
+                    _heapq.heapify(open_list)
+                continue
+            except KeyError:
+                pass
+            
+            _heapq.heappush(open_list, new_node)
+            lookup[(new_node.x, new_node.y)] = new_node
 
-
+def printList(thelist:list):
+    l = sorted(thelist, key=lambda elem:elem.f)
+    for x in l:
+        print(x)
 
 def checkAnswer(s:Solution, grid: list[list[int]], ans):
     output = s.shortestPathBinaryMatrix(grid)
@@ -118,11 +147,18 @@ def checkAnswer(s:Solution, grid: list[list[int]], ans):
 
 if __name__ == "__main__":
     s = Solution()
-    
-    checkAnswer(s, [[0,0,1,0,0,0,0],[0,1,0,0,0,0,1],[0,0,1,0,1,0,0],[0,0,0,1,1,1,0],[1,0,0,1,1,0,0],[1,1,1,1,1,0,1],[0,0,1,0,0,0,0]], 10)
+    start = time.perf_counter()
     checkAnswer(s, [[0,0,1,0,0,1,0,1,0],[0,0,0,0,0,0,0,0,0],[0,1,1,0,1,1,1,1,1],[0,0,0,1,0,0,0,0,0],[1,1,0,0,0,1,0,0,0],[1,0,1,0,0,1,0,0,1],[1,1,1,1,0,0,1,0,0],[1,0,0,1,0,0,1,1,1],[0,0,0,0,0,0,0,0,0]], 11)
     checkAnswer(s, [[0,1],[1,0]], 2)
     checkAnswer(s, [[0,0,0],[1,1,0],[1,1,0]], 4)
+    checkAnswer(s, [[0,0,1,0,0,0,0],[0,1,0,0,0,0,1],[0,0,1,0,1,0,0],[0,0,0,1,1,1,0],[1,0,0,1,1,0,0],[1,1,1,1,1,0,1],[0,0,1,0,0,0,0]], 10)
+    
+    checkAnswer(s, [[1,0,0],[1,1,0],[1,1,0]], -1)
+    checkAnswer(s, [[0,0,0],[1,1,0],[1,1,1]], -1)
+    end = time.perf_counter()
+
+    print(f"lapsed: {end - start}")
+    
 
 #   0 1 2 3 4 5 6 7 8    
 #0 [0,0,1,0,0,1,0,1,0]
